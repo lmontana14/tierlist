@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tierlist</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#EFEDE8;color:#1a1a18;min-height:100vh;padding:1.5rem 1rem;}
+.page{max-width:860px;margin:0 auto;}
+header{margin-bottom:1.5rem;}
+h1{font-size:22px;font-weight:600;letter-spacing:-0.5px;}
+.sub{font-size:12px;color:#888;margin-top:4px;}
+
+.tier-row{display:flex;align-items:stretch;margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;transition:box-shadow 0.15s;}
+.tier-row.target-hover{box-shadow:0 0 0 3px #378ADD;}
+.tier-label{width:56px;min-width:56px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;}
+.tier-S .tier-label{background:#C0392B;color:#fff;}
+.tier-A .tier-label{background:#D35400;color:#fff;}
+.tier-B .tier-label{background:#B7950B;color:#fff;}
+.tier-C .tier-label{background:#1E8449;color:#fff;}
+.tier-D .tier-label{background:#1A5276;color:#fff;}
+.tier-F .tier-label{background:#4A235A;color:#fff;}
+.tier-zone{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:5px;padding:8px 10px;min-height:50px;background:#F7F5F0;transition:background 0.15s;}
+.tier-row.target-hover .tier-zone{background:#D6EAF8;}
+
+.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;background:#fff;border:1px solid #ddd;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s,background 0.1s;box-shadow:0 1px 2px rgba(0,0,0,0.06);-webkit-tap-highlight-color:transparent;}
+.chip:hover{box-shadow:0 2px 6px rgba(0,0,0,0.12);transform:translateY(-1px);}
+.chip.selected{background:#FFF3CD;border-color:#F0A500;box-shadow:0 0 0 2px #F0A500;}
+.chip .del{font-size:10px;color:#bbb;margin-left:3px;padding:2px;}
+.chip .del:hover{color:#c0392b;}
+
+.pool-wrap{margin-top:16px;background:#fff;border-radius:12px;border:1px solid #ddd;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.pool-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:#999;margin-bottom:8px;}
+.pool-zone{display:flex;flex-wrap:wrap;gap:5px;min-height:44px;padding:6px;border-radius:8px;border:1.5px dashed #ddd;background:#fafafa;cursor:pointer;transition:background 0.15s;}
+.pool-zone.target-hover{background:#D6EAF8;border-color:#85C1E9;}
+
+.hint-bar{font-size:12px;color:#888;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none;}
+.hint-bar.visible{display:block;}
+
+.add-row{display:flex;gap:6px;margin-top:10px;}
+.add-row input{flex:1;height:36px;padding:0 10px;font-size:13px;border-radius:8px;border:1px solid #ddd;outline:none;background:#fff;font-family:inherit;}
+.add-row input:focus{border-color:#aaa;}
+.add-row button{height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ddd;background:#F0EEE9;cursor:pointer;font-family:inherit;font-weight:500;}
+.add-row button:hover{background:#e4e1da;}
+.actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.actions button{height:32px;padding:0 14px;font-size:12px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#444;}
+.actions button:hover{background:#F0EEE9;}
+.foot{font-size:11px;color:#bbb;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Tierlist del equipo</h1>
+    <p class="sub">Toca un nombre y luego toca el nivel donde quieres ubicarlo.</p>
+  </header>
+
+  <div id="hintBar" class="hint-bar"></div>
+  <div id="tiers"></div>
+
+  <div class="pool-wrap">
+    <div class="pool-label">Sin clasificar</div>
+    <div class="pool-zone" id="pool" data-tier="pool"></div>
+    <div class="add-row">
+      <input id="newName" type="text" placeholder="Agregar persona..." maxlength="40"/>
+      <button id="addBtn">+ Agregar</button>
+    </div>
+    <div class="actions">
+      <button id="exportBtn">⬇ Exportar resultado</button>
+      <button id="resetBtn">↺ Reiniciar</button>
+    </div>
+    <div class="foot">Toca un nombre para seleccionarlo · luego toca el nivel destino · ✕ para eliminar</div>
+  </div>
+</div>
+
+<script>
+const TIERS=['S','A','B','C','D','F'];
+const NAMES=[
+  'Luis Fer','Nicolás','Gilma','Nazly','Stephania','Sandra',
+  'Claudia Fernanda','Cristian','Myriam','Laura Montaña','Laura Gómez',
+  'Thiame','Mauricio Díaz','José Ignacio','Nathalia Escobar','Nathaly',
+  'Venus','Eliana','Yenifer Mina','Paola Mina','Paola Fierro',
+  'Claudia Álvarez','Ingrid Paola','Andrés Flórez','Diana Marcela',
+  'María Isabel','Ketty','Liliana','Angie Viviana','Alexa','Bianca',
+  'Yosserth','Arley','Ana Lucero','Debaye','Stephania'
+];
+
+function load(){
+  try{const d=localStorage.getItem('tl_equipo');if(d)return JSON.parse(d);}catch(e){}
+  return NAMES.map((n,i)=>({id:'p'+i,name:n,tier:'pool'}));
+}
+let people=load(), selected=null, dragId=null;
+function save(){try{localStorage.setItem('tl_equipo',JSON.stringify(people));}catch(e){}}
+
+function setHint(msg){
+  const bar=document.getElementById('hintBar');
+  if(msg){bar.textContent=msg;bar.classList.add('visible');}
+  else{bar.classList.remove('visible');}
+}
+
+function selectChip(id){
+  selected=id;
+  render();
+  const p=people.find(x=>x.id===id);
+  setHint(`"${p.name}" seleccionado/a — toca el nivel donde quieres ubicarlo.`);
+}
+
+function deselectAll(){
+  selected=null;
+  render();
+  setHint(null);
+}
+
+function moveSelected(tier){
+  if(!selected)return;
+  const p=people.find(x=>x.id===selected);
+  if(p){p.tier=tier;save();}
+  selected=null;
+  setHint(null);
+  render();
+}
+
+function makeChip(p){
+  const c=document.createElement('div');
+  c.className='chip'+(selected===p.id?' selected':'');
+  c.draggable=true;
+  c.innerHTML=`<span>${p.name}</span><span class="del">✕</span>`;
+  c.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(selected===p.id){deselectAll();return;}
+    selectChip(p.id);
+  });
+  c.addEventListener('dragstart',()=>{dragId=p.id;selected=null;});
+  c.querySelector('.del').addEventListener('click',e=>{
+    e.stopPropagation();
+    if(confirm(`¿Eliminar a "${p.name}"?`)){
+      people=people.filter(x=>x.id!==p.id);
+      if(selected===p.id){selected=null;setHint(null);}
+      save();render();
+    }
+  });
+  return c;
+}
+
+function makeDrop(el, tier){
+  el.addEventListener('dragover',e=>{e.preventDefault();el.closest('.tier-row, .pool-zone').classList.add('target-hover');});
+  el.addEventListener('dragleave',()=>el.closest('.tier-row, .pool-zone').classList.remove('target-hover'));
+  el.addEventListener('drop',e=>{
+    e.preventDefault();
+    el.closest('.tier-row, .pool-zone').classList.remove('target-hover');
+    const p=people.find(x=>x.id===dragId);
+    if(p){p.tier=tier;save();render();}
+  });
+}
+
+function render(){
+  const tiersEl=document.getElementById('tiers');tiersEl.innerHTML='';
+  TIERS.forEach(t=>{
+    const row=document.createElement('div');row.className=`tier-row tier-${t}`;
+    row.addEventListener('click',()=>{if(selected)moveSelected(t);});
+    row.addEventListener('dragover',e=>{e.preventDefault();row.classList.add('target-hover');});
+    row.addEventListener('dragleave',()=>row.classList.remove('target-hover'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();row.classList.remove('target-hover');
+      const p=people.find(x=>x.id===dragId);
+      if(p){p.tier=t;save();render();}
+    });
+    const lbl=document.createElement('div');lbl.className='tier-label';lbl.textContent=t;
+    const zone=document.createElement('div');zone.className='tier-zone';zone.dataset.tier=t;
+    people.filter(p=>p.tier===t).forEach(p=>zone.appendChild(makeChip(p)));
+    row.appendChild(lbl);row.appendChild(zone);tiersEl.appendChild(row);
+  });
+
+  const pool=document.getElementById('pool');pool.innerHTML='';
+  people.filter(p=>p.tier==='pool').forEach(p=>pool.appendChild(makeChip(p)));
+  pool.addEventListener('click',()=>{if(selected)moveSelected('pool');});
+  pool.addEventListener('dragover',e=>{e.preventDefault();pool.classList.add('target-hover');});
+  pool.addEventListener('dragleave',()=>pool.classList.remove('target-hover'));
+  pool.addEventListener('drop',e=>{
+    e.preventDefault();pool.classList.remove('target-hover');
+    const p=people.find(x=>x.id===dragId);
+    if(p){p.tier='pool';save();render();}
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click',()=>{
+  const inp=document.getElementById('newName');
+  const name=inp.value.trim();if(!name)return;
+  people.push({id:'p'+Date.now(),name,tier:'pool'});
+  inp.value='';save();render();
+});
+document.getElementById('newName').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('addBtn').click();});
+
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(confirm('¿Reiniciar? Se borrarán todos los cambios.')){
+    people=NAMES.map((n,i)=>({id:'p'+i,name:n,tier:'pool'}));
+    selected=null;setHint(null);save();render();
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const lines=['TIERLIST DEL EQUIPO','='.repeat(30),''];
+  TIERS.forEach(t=>{
+    const names=people.filter(p=>p.tier===t).map(p=>p.name);
+    if(names.length)lines.push(`[${t}]\n${names.join('\n')}\n`);
+  });
+  const sin=people.filter(p=>p.tier==='pool').map(p=>p.name);
+  if(sin.length)lines.push(`[Sin clasificar]\n${sin.join('\n')}`);
+  const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='tierlist_equipo.txt';a.click();
+});
+
+render();
+</script>
+</body>
+</html>
